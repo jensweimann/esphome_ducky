@@ -1,0 +1,140 @@
+script:
+  wemos_d1_mini_request:
+    mode: queued
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "esphome/wemos_d1_mini/run"
+          payload_template: "{{ payload }}"
+      - wait_for_trigger:
+          - platform: state
+            entity_id: sensor.wemos_d1_mini_response
+            from: "busy"
+            to: "ready"
+        timeout:
+          seconds: 60
+        continue_on_timeout: false
+
+  mibox3_on:
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "ENTER"
+
+  mibox3_off:
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "SLEEP"
+
+  mibox3_volume_up:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "VOLUP"
+
+  mibox3_volume_down:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "VOLDWN"
+
+  mibox3_volume_mute:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "VOLMUT"
+
+  mibox3_play_pause:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "PLAY_PAUSE"
+
+  mibox3_play:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "PLAY"
+
+  mibox3_pause:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "PAUSE"
+
+  mibox3_stop:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "STOP"
+
+  mibox3_next:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "NEXT"
+
+  mibox3_prev:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "PREV"
+
+  mibox3_left:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "LEFT"
+
+  mibox3_right:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "RIGHT"
+
+  mibox3_up:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "UP"
+
+  mibox3_down:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "DOWN"
+
+  mibox3_enter:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "ENTER"
+
+  mibox3_back:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "MOUSE_RIGHT"
+
+  mibox3_home:
+    mode: queued
+    sequence:
+      - service: script.wemos_d1_mini_request
+        data:
+          payload: "HOME"

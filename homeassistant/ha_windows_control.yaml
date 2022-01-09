@@ -1,0 +1,135 @@
+script:
+  nodemcu_request:
+    mode: queued
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "esphome/nodemcu/run"
+          payload_template: "{{ payload }}"
+      - wait_for_trigger:
+          - platform: state
+            entity_id: sensor.nodemcu_response
+            from: "busy"
+            to: "ready"
+        timeout:
+          seconds: 60
+        continue_on_timeout: false
+
+  nodemcu_volume_down:
+    mode: queued
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "VOLDWN"
+
+  nodemcu_volume_up:
+    mode: queued
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "VOLUP"
+
+  nodemcu_volume_mute:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "VOLMUT"
+
+  nodemcu_play_pause:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "PLAY_PAUSE"
+
+  nodemcu_play:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "PLAY"
+
+  nodemcu_pause:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "PAUSE"
+
+  nodemcu_stop:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "STOP"
+
+  nodemcu_next:
+    mode: queued
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "NEXT"
+
+  nodemcu_prev:
+    mode: queued
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "PREV"
+
+  nodemcu_unlock_screen:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nGUI l\nESC\nCTRL a\nBACKSPACE\nSTRING secret\nENTER\nDELAY 2000"
+
+  nodemcu_lock_screen:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "ESC\nDELAY 500\nGUI l"
+
+  nodemcu_wake:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "WAKE\nDELAY 7000"
+
+  nodemcu_wake_and_unlock_screen:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "WAKE\nDELAY 5000\nDEFAULTDELAY 500\nGUI l\nESC\nCTRL a\nBACKSPACE\nSTRING secret\nENTER\nDELAY 2000"
+
+  nodemcu_external_display:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nGUI p\nEND\nENTER\nESC\nDELAY 3000\nGUI r\nSTRING nircmd setdefaultsounddevice \"SONY TV\"\nENTER\nGUI r\nSTRING nircmd setsysvolume 32767\nENTER"
+
+  nodemcu_set_volume:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nGUI r\nSTRING nircmd setsysvolume {{ (65535 * value) | int(0) }}\nENTER"
+
+  nodemcu_primary_display:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nGUI p\nHOME\nENTER\nESC\nDELAY 3000\nGUI r\nSTRING nircmd setdefaultsounddevice \"Lautsprecher\"\nENTER\nGUI r\nSTRING nircmd setsysvolume 9830\nENTER"
+
+  nodemcu_standby:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "SLEEP"
+
+  nodemcu_restart_system:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nCTRL ALT DEL\nUP\nENTER\nUP\nENTER"
+
+  nodemcu_shutdown_system:
+    sequence:
+      - service: script.nodemcu_request
+        data:
+          payload: "DEFAULTDELAY 500\nCTRL ALT DEL\nUP\nENTER\nDOWN\nENTER"
+
