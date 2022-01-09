@@ -17,6 +17,11 @@ Control devices with a virtual usb keyboard/mouse from mqtt.
 * USB HID emulation and language layouts are from: https://github.com/NicoHood/HID
 * Serial communication: https://forum.arduino.cc/t/serial-input-basics-updated/382007
 
+<a href="https://www.buymeacoffee.com/jensweimann" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
+
+## Community
+https://community.home-assistant.io/t/esphome-ducky/377600
+
 ## Get Started
 ### 1. You will need
 #### 1.1 Software
