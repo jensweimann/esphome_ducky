@@ -29,17 +29,18 @@ https://community.home-assistant.io/t/esphome-ducky/377600
 * Visual Studio Code with PlatformIO, see https://platformio.org/install/ide?install=vscode
 #### 1.2 Hardware
 * Supported arduino board, see: https://github.com/NicoHood/HID/blob/master/Readme.md
-  *  Example: https://aliexpress.com/item/32768308647.html
+  *  Example: https://s.click.aliexpress.com/e/_9I1dPI
 * Supported ESP8266 or ESP32 board, see: https://esphome.io/#devices
-  * Example 1: https://aliexpress.com/item/4000160133215.html
-  * Example 2: https://aliexpress.com/item/32651747570.html
+  * Example 1: https://s.click.aliexpress.com/e/_ArGz12
+  * Example 2: https://s.click.aliexpress.com/e/_Ak9SzQ
 * Breadboard and jumper wires or soldering skills
-  * Example: https://aliexpress.com/item/1005002279397406.html
-  * Example: https://aliexpress.com/item/32825558073.html
+  * Example: https://s.click.aliexpress.com/e/_ABTaNm
+  * Example: https://s.click.aliexpress.com/e/_AdVgok
 * Micro USB Cable
 * CJMCU-3212 (alternative)
- This neat device combines the two above boards in one. Unfortunately I can't recommend it since the wifi reception is pretty poor on my unit and the flashing process is not as simple, see: https://github.com/TheMMcOfficial/CJMCU-3212-wifi_ducky
-  * Example: https://aliexpress.com/item/32839392329.html
+ This neat device combines the two above boards in one. Unfortunately I can't recommend it since the wifi reception is pretty poor on my unit and the flashing process is not as simple, see: https://github.com/TheMMcOfficial/CJMCU-3212-wifi_ducky But with the SD card reader it's possible to execute pre-written scripts.
+  * Example 1: https://s.click.aliexpress.com/e/_ApGiWC
+  * Example 2: https://s.click.aliexpress.com/e/_AbiQtA
 
 ### 2. Wiring
 This is mostly taken from the wifi_ducky project:
