@@ -61,7 +61,7 @@ This is mostly taken from the wifi_ducky project:
 ### 3. Flashing
 #### 3.1 Visual Studio Code
 * Checkout/Download and open this project
-* Currently the german keyboard layout is hardcoded. Adjust keyboard language: For english it is sufficient to comment out the first two lines in [src/main.cpp](src/main.cpp). For other languages, see: https://github.com/NicoHood/HID/blob/master/src/KeyboardLayouts/ImprovedKeylayouts.h#L659
+* It's important to adjust the simulated keyboard's language to your machine's system language if you want to inject text. Currently the german keyboard layout is defined. Adjust keyboard language: For english it is sufficient to comment out the first two lines in [src/main.cpp](src/main.cpp). For other languages, see: https://github.com/NicoHood/HID/blob/master/src/KeyboardLayouts/ImprovedKeylayouts.h#L659 
 * Adjust the port in [platformio.ini](platformio.ini) and flash
 #### 3.2 ESPHome
 * Create a new ESPHome project, paste and adjust the yaml file [esphome/nodemcu.yaml](esphome/nodemcu.yaml) (see comments)
