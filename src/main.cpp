@@ -7,6 +7,7 @@
 #define USB_RECEIVE_BUFFER_SIZE 8
 #define EspSerial Serial1
 #define UsbSerial Serial
+#define WRITE_CHAR_DELAY 10
 //-----------------------------
 #include <Arduino.h>
 #include <HID-Project.h>
@@ -14,8 +15,8 @@
 //#include <SD.h>
 
 //-----------------------------
-const char ESP_START_MARKER = 0x02; //START OF TEXT
-const char ESP_END_MARKER = 0x03; //END OF TEXT
+const char ESP_START_MARKER = 0x02;  // START OF TEXT
+const char ESP_END_MARKER = 0x03;    // END OF TEXT
 
 enum State : byte { NONE, ON, OFF, SLEEP };
 
@@ -29,7 +30,7 @@ uint16_t usbReceiveIndex = 0;
 boolean usbNewData = false;
 
 uint16_t defaultDelay = 0;
-boolean debug = false;
+const boolean DEBUG = false;
 uint16_t startRam = 0;
 State lastPusblishedState = NONE;
 
@@ -43,7 +44,9 @@ uint16_t getFreeRam() {
 }
 
 void setup() {
-  startRam = getFreeRam();
+  if (DEBUG) {
+    startRam = getFreeRam();
+  }
   pinMode(OUTER_LED, OUTPUT);
   digitalWrite(OUTER_LED, HIGH);
   pinMode(INNER_LED, OUTPUT);
@@ -258,17 +261,17 @@ void Line(String _line, String last) {
   } else {
     String subString = _line.substring(0, firstSpace);
     if (subString.equals("STRING")) {
-      if (debug) {
+      if (DEBUG) {
         UsbSerial.print("Going to type ");
         UsbSerial.print(
             _line.substring(firstSpace + 1, _line.length()).length());
         UsbSerial.println(" chars...");
       }
       for (uint16_t i = firstSpace + 1; i < _line.length(); i++) {
-             Keyboard.write(_line[i]);
-        delay(5);
+        Keyboard.write(_line[i]);
+        delay(WRITE_CHAR_DELAY);
       }
-      if (debug) UsbSerial.println("typing done");
+      if (DEBUG) UsbSerial.println("typing done");
     } else if (subString.equals("SERIAL") && UsbSerial) {
       for (uint16_t i = firstSpace + 1; i < _line.length(); i++) {
         UsbSerial.print(_line[i]);
@@ -281,22 +284,24 @@ void Line(String _line, String last) {
       defaultDelay = _line.substring(firstSpace + 1).toInt();
     else if (subString.equals("REM")) {
       // nothing :/
-    }
-    //  Add by james. for mouse moving------------------------------
-    else if (subString.equals("MOVE")) {
+    } else if (subString.equals("MOUSE_MOVE")) {
       uint16_t comma = _line.indexOf(",");
-      uint16_t point_x = _line.substring(firstSpace + 1, comma).toInt();
-      uint16_t point_y = _line.substring(comma + 1).toInt();
-      if (debug) {
+      int point_x = _line.substring(firstSpace + 1, comma).toInt();
+      int point_y = _line.substring(comma + 1).toInt();
+      if (DEBUG) {
         UsbSerial.print("Move to x=");
         UsbSerial.print(point_x);
         UsbSerial.print(", y=");
         UsbSerial.println(point_y);
       }
-      Mouse.move(point_x, point_y);  // signed char, only values < 128
+      Mouse.move(point_x, point_y);
+    } else if (subString.equals("MOUSE_SCROLL") ||
+               subString.equals("MOUSE_WHEEL") || subString.equals("SCROLL")) {
+      int steps = _line.substring(firstSpace + 1).toInt();
+      Mouse.move(0, 0, steps);
     }
     //---------------------------------------------------------
-    else if (subString.equals("REPLAY")) {
+    else if (subString.equals("REPLAY") || subString.equals("REPEAT")) {
       uint16_t replaynum = _line.substring(firstSpace + 1).toInt();
       while (replaynum) {
         Line(last, "");
@@ -314,7 +319,7 @@ void Line(String _line, String last) {
           Press(remain.substring(0, latest_space));
           remain = remain.substring(latest_space + 1);
         }
-        delay(5);
+        delay(WRITE_CHAR_DELAY);
       }
     }
   }
@@ -337,7 +342,7 @@ void handleDuckyCommand() {
     while (bufferStr.length() > 0) {
       int16_t latest_return = bufferStr.indexOf("\n");
       if (latest_return == -1) {
-        if (debug) {
+        if (DEBUG) {
           UsbSerial.print("run1: '");
           UsbSerial.print(bufferStr);
           UsbSerial.println("'");
@@ -347,7 +352,7 @@ void handleDuckyCommand() {
       } else {
         String temp = bufferStr.substring(0, latest_return);
         if (temp.length() > 0) {
-          if (debug) {
+          if (DEBUG) {
             UsbSerial.print("run2: '");
             UsbSerial.print(temp);
             UsbSerial.println("'");
@@ -355,13 +360,13 @@ void handleDuckyCommand() {
           Line(temp, last);
           last = temp;
         }
-        if (debug) {
+        if (DEBUG) {
           UsbSerial.println("bufferStr length: " + String(bufferStr.length()));
           UsbSerial.println("Select next substring from: " +
                             String(latest_return + 1));
         }
         bufferStr = bufferStr.substring(latest_return + 1);
-        if (debug) {
+        if (DEBUG) {
           UsbSerial.println("resulting bufferStr length: " +
                             String(bufferStr.length()));
         }
@@ -373,7 +378,7 @@ void handleDuckyCommand() {
     last = "";
     digitalWrite(INNER_LED, LOW);
 
-    if (debug) {
+    if (DEBUG) {
       UsbSerial.println("done");
       UsbSerial.println("Free ram start: " + String(startRam) + " Bytes.");
       UsbSerial.println("Free ram now: " + String(getFreeRam()) + " Bytes.");
@@ -384,7 +389,7 @@ void handleDuckyCommand() {
 void handleNewData() {
   if (espNewData == true) {
     handleDuckyCommand();
-    if (debug) {
+    if (DEBUG) {
       EspSerial.print("ESP_INPUT=");
       EspSerial.println(espReceivedChars);
     }
@@ -397,16 +402,16 @@ void handleNewData() {
   }
 }
 
-char *getStateText(State state) {
+String getStateText(State state) {
   switch (state) {
     case ON:
-      return strdup("STATE=ON");
+      return "STATE=ON";
     case OFF:
-      return strdup("STATE=OFF");
+      return "STATE=OFF";
     case SLEEP:
-      return strdup("STATE=SLEEP");
+      return "STATE=SLEEP";
     default:
-      return strdup("STATE=NONE");
+      return "STATE=NONE";
   }
 }
 
@@ -423,10 +428,8 @@ void publishUsbDeviceState() {
   }
   if (lastPusblishedState != state) {
     lastPusblishedState = state;
-    char *result = getStateText(state);
-    EspSerial.println(result);
+    EspSerial.println(getStateText(state));
     EspSerial.println("ready");
-    free(result);
   }
 }
 
@@ -436,45 +439,3 @@ void loop() {
   handleNewData();
   publishUsbDeviceState();
 }
-
-/*
-  void processSD() {
-  if (debug) UsbSerial.println("Begin SD access...");
-  if (SD.begin(4)) {
-    digitalWrite(OUTER_LED, HIGH);
-    if (debug) UsbSerial.println("SD access established");
-    File myFile = SD.open("ducky.txt");
-    if (myFile) {
-      EspSerial.println("busy");
-      if (debug) UsbSerial.println("executing ducky.txt...");
-      uint16_t i = 0;
-      while (myFile.available()) {
-        char myChar = myFile.read();
-        char command[255];
-        if ((myChar == (13)) || (myChar == '\n')) {
-          command[i] = '\x00';
-          if (strlen(command) > 0) {
-            //delay(500);
-            if (debug) UsbSerial.println(command);
-            Line(String(command));
-          }
-          i = 0;
-        }
-        else {
-          command[i] = myChar;
-          i++;
-        }
-      }
-      myFile.close();
-      if (debug) UsbSerial.println("executing ducky.txt done");
-    } else {
-      // if the file didn't open, print an error:
-      if (debug) UsbSerial.println("error opening file");
-    }
-    if (debug) UsbSerial.println("End SD access");
-    SD.end();
-    digitalWrite(OUTER_LED, LOW);
-  } else {
-    if (debug) UsbSerial.println("No SD available");
-  }
-  }*/
