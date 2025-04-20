@@ -1,22 +1,26 @@
-#define HID_CUSTOM_LAYOUT
-#define LAYOUT_GERMAN
+// turn usb c cable so that blue led is lighting up. 
+// than you can flash with platformio
+
 #define BAUD_RATE 115200
-#define OUTER_LED 13
-#define INNER_LED 8
 #define ESP_RECEIVE_BUFFER_SIZE 255
-#define USB_RECEIVE_BUFFER_SIZE 8
-#define EspSerial Serial1
+#define USB_RECEIVE_BUFFER_SIZE 255
+
+#define PIN_SERIAL2_RTS (11u)
+#define PIN_SERIAL2_CTS (10u)
+#define PIN_SERIAL2_RX (9u)
+#define PIN_SERIAL2_TX (8u)
+
+#define EspSerial Serial2
 #define UsbSerial Serial
 #define WRITE_CHAR_DELAY 10
 //-----------------------------
 #include <Arduino.h>
-#include <HID-Project.h>
-//#include <SPI.h>
-//#include <SD.h>
+#include <Keyboard.h>
+#include <Mouse.h>
 
 //-----------------------------
-const char ESP_START_MARKER = 0x02;  // START OF TEXT
-const char ESP_END_MARKER = 0x03;    // END OF TEXT
+const char ESP_START_MARKER = '<';  // START OF TEXT
+const char ESP_END_MARKER = '>';    // END OF TEXT
 
 enum State : byte { NONE, ON, OFF, SLEEP };
 
@@ -31,41 +35,21 @@ boolean usbNewData = false;
 
 uint16_t defaultDelay = 0;
 const boolean DEBUG = false;
-uint16_t startRam = 0;
 State lastPusblishedState = NONE;
 
-uint16_t getFreeRam() {
-  uint16_t size = 2560;
-  byte *buf;
-  while ((buf = (byte *)malloc(--size)) == NULL)
-    ;
-  free(buf);
-  return size;
-}
 
 void setup() {
-  if (DEBUG) {
-    startRam = getFreeRam();
-  }
-  pinMode(OUTER_LED, OUTPUT);
-  digitalWrite(OUTER_LED, HIGH);
-  pinMode(INNER_LED, OUTPUT);
-  digitalWrite(INNER_LED, HIGH);
-
-  // disable arduino pro micro leds
-  pinMode(LED_BUILTIN_RX, INPUT);
-  pinMode(LED_BUILTIN_TX, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
 
   UsbSerial.begin(BAUD_RATE);
   EspSerial.begin(BAUD_RATE);
 
-  Keyboard.begin();
+  Keyboard.begin(KeyboardLayout_de_DE);
   Mouse.begin();
-  Consumer.begin();
-  System.begin();
-  digitalWrite(INNER_LED, LOW);
-  digitalWrite(OUTER_LED, LOW);
-  // processSD();
+
+  digitalWrite(LED_BUILTIN, LOW);
+
   EspSerial.println("setup done");
 }
 
@@ -178,12 +162,13 @@ void Press(String b) {
     Keyboard.press(KEY_F11);
   else if (b.equals("F12"))
     Keyboard.press(KEY_F12);
-  else if (b.equals("SPACE"))
-    Keyboard.press(KEY_SPACE);
+    else if (b.equals("SPACE"))
+    // Keyboard.press(KEY_SPACE);
+    Keyboard.write((char) 0x20); // no spacebar key available
   else if (b.equals("APP") || b.equals("MENU"))
     Keyboard.press(KEY_MENU);
   else if (b.equals("PRINTSCREEN"))
-    Keyboard.press(KEY_PRINT);
+    Keyboard.press(KEY_PRINT_SCREEN);
   else if (b.equals("SCROLLOCK"))
     Keyboard.press(KEY_SCROLL_LOCK);
   else if (b.equals("BREAK"))
@@ -192,30 +177,30 @@ void Press(String b) {
     Keyboard.press(KEY_NUM_LOCK);
   //---------------------------------------------------------
   else if (b.equals("VOLUP"))
-    Consumer.write(MEDIA_VOL_UP);
+    Keyboard.consumerPress(KEY_VOLUME_INCREMENT);
   else if (b.equals("VOLDWN"))
-    Consumer.write(MEDIA_VOL_DOWN);
+    Keyboard.consumerPress(KEY_VOLUME_DECREMENT);
   else if (b.equals("VOLMUT") || b.equals("MUTE"))
-    Consumer.write(MEDIA_VOL_MUTE);
+    Keyboard.consumerPress(KEY_MUTE);
   else if (b.equals("PLAY_PAUSE"))
-    Consumer.write(MEDIA_PLAY_PAUSE);
+    Keyboard.consumerPress(KEY_PLAY_PAUSE);
   else if (b.equals("PLAY"))
-    Consumer.write(HID_CONSUMER_PLAY);
+    Keyboard.consumerPress(KEY_PLAY_PAUSE);
   else if (b.equals("PAUSE"))
-    Consumer.write(HID_CONSUMER_PAUSE);
+    Keyboard.consumerPress(KEY_PLAY_PAUSE);
   else if (b.equals("STOP"))
-    Consumer.write(MEDIA_STOP);
+    Keyboard.consumerPress(KEY_STOP);
   else if (b.equals("NEXT"))
-    Consumer.write(MEDIA_NEXT);
+    Keyboard.consumerPress(KEY_SCAN_NEXT);
   else if (b.equals("PREV"))
-    Consumer.write(MEDIA_PREVIOUS);
+    Keyboard.consumerPress(KEY_SCAN_PREVIOUS);
   //---------------------------------------------------------
   else if (b.equals("WAKE"))
-    System.write(SYSTEM_WAKE_UP);
+    Keyboard.press(KEY_LEFT_CTRL);
   else if (b.equals("SLEEP"))
-    System.write(SYSTEM_SLEEP);
-  else if (b.equals("POWER_DOWN"))
-    System.write(SYSTEM_POWER_DOWN);
+    Keyboard.consumerPress(KEY_SLEEP);
+  else if (b.equals("POWER"))
+    Keyboard.consumerPress(KEY_POWER);
   //---------------------------------------------------------
   else if (b.equals("MOUSE_LEFT") || b.equals("CLICK"))
     Mouse.click();
@@ -224,9 +209,9 @@ void Press(String b) {
   else if (b.equals("MOUSE_MIDDLE"))
     Mouse.click(MOUSE_MIDDLE);
   else if (b.equals("MOUSE_PREV"))
-    Mouse.click(MOUSE_PREV);
+    Keyboard.consumerPress(KEY_AC_BACK); // no mouse button available
   else if (b.equals("MOUSE_NEXT"))
-    Mouse.click(MOUSE_NEXT);
+    Keyboard.consumerPress(KEY_AC_FORWARD); // no mouse button available
   else if (b.equals("MOUSE_LEFT_DOWN")) {
     if (!Mouse.isPressed(MOUSE_LEFT)) {
       Mouse.press(MOUSE_LEFT);
@@ -252,6 +237,7 @@ void Press(String b) {
       Mouse.release(MOUSE_MIDDLE);
     }
   }
+  delay(WRITE_CHAR_DELAY);
 }
 
 void Line(String _line, String last) {
@@ -319,15 +305,13 @@ void Line(String _line, String last) {
           Press(remain.substring(0, latest_space));
           remain = remain.substring(latest_space + 1);
         }
-        delay(WRITE_CHAR_DELAY);
       }
     }
   }
 
   Keyboard.releaseAll();
-  Consumer.releaseAll();
-  // Mouse.releaseAll();
-  System.releaseAll();
+  Keyboard.consumerRelease();
+
   delay(defaultDelay);
 }
 
@@ -338,7 +322,7 @@ void handleDuckyCommand() {
   bufferStr.replace("\n\n", "\n");
   if (bufferStr.length() > 0) {
     EspSerial.println("busy");
-    digitalWrite(INNER_LED, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
     while (bufferStr.length() > 0) {
       int16_t latest_return = bufferStr.indexOf("\n");
       if (latest_return == -1) {
@@ -376,13 +360,7 @@ void handleDuckyCommand() {
     EspSerial.println("ready");
     defaultDelay = 0;
     last = "";
-    digitalWrite(INNER_LED, LOW);
-
-    if (DEBUG) {
-      UsbSerial.println("done");
-      UsbSerial.println("Free ram start: " + String(startRam) + " Bytes.");
-      UsbSerial.println("Free ram now: " + String(getFreeRam()) + " Bytes.");
-    }
+    digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
@@ -402,40 +380,40 @@ void handleNewData() {
   }
 }
 
-String getStateText(State state) {
-  switch (state) {
-    case ON:
-      return "STATE=ON";
-    case OFF:
-      return "STATE=OFF";
-    case SLEEP:
-      return "STATE=SLEEP";
-    default:
-      return "STATE=NONE";
-  }
-}
+// String getStateText(State state) {
+//   switch (state) {
+//     case ON:
+//       return "STATE=ON";
+//     case OFF:
+//       return "STATE=OFF";
+//     case SLEEP:
+//       return "STATE=SLEEP";
+//     default:
+//       return "STATE=NONE";
+//   }
+// }
 
-void publishUsbDeviceState() {
-  State state = NONE;
-  if (USBDevice.configured()) {
-    if (USBDevice.isSuspended()) {
-      state = SLEEP;
-    } else {
-      state = ON;
-    }
-  } else {
-    state = OFF;
-  }
-  if (lastPusblishedState != state) {
-    lastPusblishedState = state;
-    EspSerial.println(getStateText(state));
-    EspSerial.println("ready");
-  }
-}
+// void publishUsbDeviceState() {
+//   State state = NONE;
+//   if (USBDevice.configured()) {
+//     if (USBDevice.isSuspended()) {
+//       state = SLEEP;
+//     } else {
+//       state = ON;
+//     }
+//   } else {
+//     state = OFF;
+//   }
+//   if (lastPusblishedState != state) {
+//     lastPusblishedState = state;
+//     EspSerial.println(getStateText(state));
+//     EspSerial.println("ready");
+//   }
+// }
 
 void loop() {
   receiveFromEspSerial();
   receiveFromUsbSerial();
   handleNewData();
-  publishUsbDeviceState();
+  // publishUsbDeviceState();
 }

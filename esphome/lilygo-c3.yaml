@@ -1,0 +1,142 @@
+# turn usb c cable so that gren led is lighting up. 
+# than you can flash first time over usb from esphome
+
+substitutions:
+  unit_name: "lilygo-c3"
+
+wifi:
+  # FIXME: adjust
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  reboot_timeout: 0s
+
+esphome:
+  name: ${unit_name}
+  friendly_name: ${unit_name}
+  platformio_options:
+    board_build.f_flash: 40000000L
+    board_build.flash_mode: dio
+    board_build.flash_size: 4MB
+
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_BT_BLE_42_FEATURES_SUPPORTED: y
+      CONFIG_BT_BLE_50_FEATURES_SUPPORTED: y
+
+logger:
+  hardware_uart: UART1
+  level: INFO
+  baud_rate: 0
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true # actively send scan requests to request more data
+    continuous: false # c3 workaround, see https://esphome.io/components/esp32_ble_tracker.html#use-on-single-core-chips
+
+bluetooth_proxy:
+  active: true
+
+external_components:
+  - source: github://eigger/espcomponents@latest # https://github.com/eigger/espcomponents/tree/master/components/uartex
+    components:
+      - uartex
+uartex:
+  rx_footer: "\r\n"
+
+uart:
+  id: ducky
+  tx_pin: 7
+  rx_pin: 6
+  baud_rate: 115200
+  # debug:
+  #   direction: BOTH
+  #   dummy_receiver: false
+  #   after:
+  #     delimiter: "\n"
+  #   sequence:
+  #     - lambda: UARTDebug::log_string(direction, bytes);
+
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: !secret api_encryption_key # adjust
+  on_client_connected:
+    - esp32_ble_tracker.start_scan:
+       continuous: true
+  on_client_disconnected:
+    - esp32_ble_tracker.stop_scan:
+  # reboot_timeout: 0s
+  encryption:
+    key: !secret api_encryption_key
+  actions: 
+    action: ducky_request
+    variables:
+      payload: string
+    then: 
+        - if:
+            condition:
+              lambda: |-
+                return ((payload.length() > 0) && (payload != "\n"));
+            then:
+              - logger.log:
+                  level: DEBUG
+                  format: "ducky_request: %s"
+                  args: ['payload.c_str()']
+              - uart.write: 
+                  id: ducky
+                  data: !lambda |-
+                    char stx = '<';
+                    char etx = '>';
+                    std::string s = stx + payload + etx;
+                    return std::vector<unsigned char>(s.begin(),s.end());
+
+text_sensor:
+  # feedback from arduino
+  - platform: template
+    name: ${unit_name}_response
+    id: ducky_response
+    on_value:
+      - logger.log:
+          level: INFO
+          format: "ducky_response: %s"
+          args: ['x.c_str()']
+
+  # host machine's usb serial input forwarding
+  - platform: template
+    id: ducky_usb_input
+    name: ${unit_name}_usb_input
+
+  # serial port sensor
+  - platform: uartex
+    id: read_line_sensor
+    lambda: |-
+      return std::string(reinterpret_cast<const char*>(data), len);
+    on_value:
+      then:
+        - if:
+            condition:
+              # usb serial input forwarding
+              lambda: |-
+                return str_startswith(x, "USB_INPUT=");
+            then:
+              - text_sensor.template.publish:
+                  id: ducky_usb_input
+                  state: !lambda |-
+                    x.erase(0,10);
+                    return x.c_str();
+            else:
+              # responses (ready/busy etc.)
+              - if:
+                  condition:
+                    lambda: |-
+                      return (x != id(ducky_response).state);
+                  then:
+                    - text_sensor.template.publish:
+                        id: ducky_response
+                        state: !lambda |-
+                          return x;
