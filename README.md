@@ -37,10 +37,14 @@ https://community.home-assistant.io/t/esphome-ducky/377600
   * Example: https://s.click.aliexpress.com/e/_ABTaNm
   * Example: https://s.click.aliexpress.com/e/_AdVgok
 * Micro USB Cable
-* CJMCU-3212 (alternative)
+
+#### 1.3 Alternative Hardware
+* CJMCU-3212
  This neat device combines the two above boards in one. Unfortunately I can't recommend it since the wifi reception is pretty poor on my unit and the flashing process is not as simple, see: https://github.com/TheMMcOfficial/CJMCU-3212-wifi_ducky But with the SD card reader it's possible to execute pre-written scripts.
   * Example 1: https://s.click.aliexpress.com/e/_ApGiWC
   * Example 2: https://s.click.aliexpress.com/e/_AbiQtA
+* [LilyGO T-PicoC3](https://github.com/Xinyuan-LilyGO/T-PicoC3)
+This board combines two chips ESP32-C3 and Raspberry Pico RP2040. The USB-HID-Stack will run on the RP2040 but it is not as feature rich as the HID library by NicoHood. But most keys are working (keyboard, mouse) nevertheless. See branch https://github.com/jensweimann/esphome_ducky/tree/lilygo-t-pico-c3.
 
 ### 2. Wiring
 This is mostly taken from the wifi_ducky project:

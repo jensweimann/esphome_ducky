@@ -9,7 +9,7 @@ wifi:
   fast_connect: true
   reboot_timeout: 0s
 
-# I'm using mqtt for communication with home assistant
+# I'm using mqtt for communication with home assistant. esphome native api is also possible, see lilygo-c3 branch
 mqtt:
   broker: !secret mqtt_broker
   username: !secret mqtt_username
@@ -17,17 +17,16 @@ mqtt:
 
 esphome:
   name: ${unit_name}
-  platform: ESP8266
-  # FIXME: adjust
-  board: nodemcuv2
-  includes:
-    # this sensor will receive responses from the arduino
-    # https://esphome.io/cookbook/uart_text_sensor.html
-    - uart_read_line_sensor.h
+  friendly_name: ${unit_name}
   on_boot:
     then:
       # optionally reboot arduino when this device is rebooted
       - switch.turn_on: arduino_reset
+
+# esp32 is also possible, see lilygo-c3 branch. any board with UART should work in theory.
+esp8266:
+  board: nodemcuv2 # FIXME: adjust to your board
+  early_pin_init: False # don't mess with gpio pins on boot
 
 logger:
   # move esphome's logger to UART1 since we use UART0 for communcation with the arduino
@@ -42,6 +41,14 @@ globals:
     type: std::string
     restore_value: no
     initial_value: ""
+
+# library for serial port communication with the arduino board
+external_components:
+  - source: github://eigger/espcomponents@latest # https://github.com/eigger/espcomponents/tree/master/components/uartex
+    components:
+      - uartex
+uartex:
+  rx_footer: "\r\n"
 
 # serial port for arduino
 uart:
@@ -119,55 +126,52 @@ text_sensor:
                     std::string s = stx + x + etx;
                     return std::vector<unsigned char>(s.begin(),s.end());
 
-  # serial port sensor
-  - platform: custom
+  # serial port back channel from the arduino
+  - platform: uartex
+    id: read_line_sensor
     lambda: |-
-      auto my_custom_sensor = new UartReadLineSensor(id(ducky));
-      App.register_component(my_custom_sensor);
-      return {my_custom_sensor};
-    text_sensors:
-      id: read_line_sensor
-      on_value:
-        then:
-          - if:
-              condition:
-                # usb power state
-                lambda: |-
-                  return str_startswith(x, "STATE=");
-              then:
-                - globals.set:
-                    id: last_host_state
-                    value: !lambda |-
-                      x.erase(0,6);
-                      return x.c_str();
-                - if:
-                    condition:
-                      lambda: |-
-                        return (id(last_host_state) != id(ducky_host_state).state);
-                    then:
-                      - text_sensor.template.publish:
-                          id: ducky_host_state
-                          state: !lambda |-
-                            return id(last_host_state);
-          - if:
-              condition:
-                # usb serial input forwarding
-                lambda: |-
-                  return str_startswith(x, "USB_INPUT=");
-              then:
-                - text_sensor.template.publish:
-                    id: ducky_usb_input
-                    state: !lambda |-
-                      x.erase(0,10);
-                      return x.c_str();
-              else:
-                # responses (ready/busy etc.)
-                - if:
-                    condition:
-                      lambda: |-
-                        return (x != id(ducky_response).state);
-                    then:
-                      - text_sensor.template.publish:
-                          id: ducky_response
-                          state: !lambda |-
-                            return x;
+      return std::string(reinterpret_cast<const char*>(data), len);
+    on_value:
+      then:
+        - if:
+            condition:
+              # usb power state
+              lambda: |-
+                return str_startswith(x, "STATE=");
+            then:
+              - globals.set:
+                  id: last_host_state
+                  value: !lambda |-
+                    x.erase(0,6);
+                    return x.c_str();
+              - if:
+                  condition:
+                    lambda: |-
+                      return (id(last_host_state) != id(ducky_host_state).state);
+                  then:
+                    - text_sensor.template.publish:
+                        id: ducky_host_state
+                        state: !lambda |-
+                          return id(last_host_state);
+        - if:
+            condition:
+              # usb serial input forwarding
+              lambda: |-
+                return str_startswith(x, "USB_INPUT=");
+            then:
+              - text_sensor.template.publish:
+                  id: ducky_usb_input
+                  state: !lambda |-
+                    x.erase(0,10);
+                    return x.c_str();
+            else:
+              # responses (ready/busy etc.)
+              - if:
+                  condition:
+                    lambda: |-
+                      return (x != id(ducky_response).state);
+                  then:
+                    - text_sensor.template.publish:
+                        id: ducky_response
+                        state: !lambda |-
+                          return x;
